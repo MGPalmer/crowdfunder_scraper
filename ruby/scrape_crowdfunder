@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'bundler/setup'
+require 'httpx'
+require 'nokogiri'
+
+index_url  = ENV["CROWDFUNDER_PROJECTS_URL"]
+index_html = HTTPX.get(index_url).to_s
+index      = Nokogiri.parse(index_html)
+
+page_urls = [index_url]

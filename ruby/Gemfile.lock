@@ -5,6 +5,9 @@ GEM
     httpx (0.5.1)
       http-2 (>= 0.9.0)
       timers
+    mini_portile2 (2.4.0)
+    nokogiri (1.10.5)
+      mini_portile2 (~> 2.4.0)
     timers (4.3.0)
 
 PLATFORMS
@@ -12,6 +15,7 @@ PLATFORMS
 
 DEPENDENCIES
   httpx
+  nokogiri
 
 BUNDLED WITH
    1.17.1
