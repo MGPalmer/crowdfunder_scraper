@@ -4,9 +4,26 @@ require 'rubygems'
 require 'bundler/setup'
 require 'httpx'
 require 'nokogiri'
+require 'pp'
 
 index_url  = ENV["CROWDFUNDER_PROJECTS_URL"]
 index_html = HTTPX.get(index_url).to_s
 index      = Nokogiri.parse(index_html)
 
-page_urls = [index_url]
+def parse_detail_page_urls(page)
+  page.css(".campaign-details a.campaign-link").map { |a| a[:href] }
+end
+
+pages = [index]
+page_urls = index.css("ul.pagination a.page-link").map { |a| a[:href] }
+pp(page_urls)
+page_urls.each do |page_url|
+  pages << Nokogiri.parse(HTTPX.get(page_url).to_s)
+end
+
+detail_urls = []
+pages.each do |page|
+  detail_urls += parse_detail_page_urls(page)
+end
+
+pp(detail_urls)
