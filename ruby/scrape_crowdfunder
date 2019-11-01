@@ -10,6 +10,15 @@ index_url  = ENV["CROWDFUNDER_PROJECTS_URL"]
 index_html = HTTPX.get(index_url).to_s
 index      = Nokogiri.parse(index_html)
 
+def get_n_parse(url)
+    res = HTTPX.get(url)
+    unless res.status == 200
+        puts "AAAAAAAAAA HTTP error for #{url} - #{res.status}"
+        return nil
+    end
+  Nokogiri.parse(res.body.to_s)
+end
+
 def parse_detail_page_urls(page)
   page.css(".campaign-details a.campaign-link").map { |a| a[:href] }
 end
@@ -18,8 +27,10 @@ pages = [index]
 page_urls = index.css("ul.pagination a.page-link").map { |a| a[:href] }
 pp(page_urls)
 page_urls.each do |page_url|
-  pages << Nokogiri.parse(HTTPX.get(page_url).to_s)
+  pages << get_n_parse(page_url)
 end
+
+pages.compact!
 
 detail_urls = []
 pages.each do |page|
@@ -27,3 +38,25 @@ pages.each do |page|
 end
 
 pp(detail_urls)
+
+campaigns = detail_urls.map do |detail_url|
+  puts detail_url
+  page             = get_n_parse(detail_url)
+  next unless page
+  #puts page.css("h5.campaign-goal").text
+  campaign_goal    = Integer(page.css("h5.campaign-goal").text.gsub(/€|,/, ""))
+  remaining_amount = Integer(page.css("p.remaining-amount").inner_html.gsub(",", "").scan(/€(\d+)?\s/m).flatten.first)
+  {
+      url: detail_url,
+      campaign_goal: campaign_goal,
+      remaining_amount: remaining_amount,
+  }
+end.compact
+
+pp(campaigns)
+
+count     = campaigns.size
+total     = campaigns.inject(0) { |t, n| t + n[:campaign_goal]}
+remaining = campaigns.inject(0) { |t, n| t + n[:remaining_amount]}
+
+puts "#{count} campaigns, #{total}€ total, #{remaining}€ remaining, #{total - remaining}€ earned"
