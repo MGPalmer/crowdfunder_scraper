@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/inline'
+
+gemfile do
+  source 'https://rubygems.org'
+  gem 'capybara'
+end
+
+require 'pp'
+
+scraper_path = ARGV.first
+unless scraper_path and File.exist?(scraper_path)
+  raise ArgumentError, "Please provide the scraper you want to test, i.e. './test ruby/scrape_crowdfunder'"
+end
