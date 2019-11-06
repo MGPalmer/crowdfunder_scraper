@@ -1,16 +1,38 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require 'bundler/inline'
+require 'rubygems'
+require 'bundler/setup'
+require 'pp'
+require 'pry'
 
-gemfile do
-  source 'https://rubygems.org'
-  gem 'capybara'
+SCRAPER_PATH = ARGV.first
+unless SCRAPER_PATH and File.exist?(SCRAPER_PATH)
+  raise ArgumentError, "Please provide the scraper you want to test, i.e. './test ruby/scrape_crowdfunder'"
 end
 
-require 'pp'
+require "minitest/autorun"
 
-scraper_path = ARGV.first
-unless scraper_path and File.exist?(scraper_path)
-  raise ArgumentError, "Please provide the scraper you want to test, i.e. './test ruby/scrape_crowdfunder'"
+class TestScraper < Minitest::Test
+  def setup
+    ENV['CROWDFUNDER_PROJECTS_URL'] = "http://example.com"
+  end
+
+  def run_scraper
+    path, script = SCRAPER_PATH.split("/")
+    command = ""
+    # We need to cd into any sub-folder(s) so the scripts there can do setup like rvm, bundler, nvm, etc.
+    command += "cd #{path} && " if path
+    command += "./#{script}"
+    # We need to have a "clean" Bundler env (i.e., forget any currently loaded gems),
+    # as the script called might be another Ruby script, with its own Gemfile, and by default
+    # shelling out "keeps" the gems from this test runner, making the script fail
+    Bundler.with_original_env do
+      `bash -c '#{command}'`
+    end
+  end
+
+  def test_that_shit_works
+    assert_equal "OHAI!", run_scraper
+  end
 end
