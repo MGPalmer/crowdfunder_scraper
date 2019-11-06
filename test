@@ -33,7 +33,34 @@ class TestScraper < Minitest::Test
     end
   end
 
-  def test_that_shit_works
-    assert_equal "OHAI!", run_scraper
+  def test_index_page_has_no_links
+    assert_equal "No valid links for pagination of projects found, has the site changed?", run_scraper
+  end
+
+  def test_index_page_returns_404
+    skip "TODO"
+  end
+
+  def test_page_1_returns_404
+    skip "TODO"
+  end
+
+  def test_detail_page_1_returns_404
+    skip "TODO"
+  end
+
+  def test_simple_success_case
+    # TODO: Set up links and data so that there is one project on the first index page, no pagination links
+    assert_equal "1 campaigns, 100€ total, 80€ remaining, 20€ earned", run_scraper
+  end
+
+  def test_success_with_pagination
+    # TODO: Set it up so index page has 8 projects, and 1 extra page with 1 more project on it
+    assert_equal "9 campaigns, 900€ total, 720€ remaining, 180€ earned", run_scraper
+  end
+
+  def test_verbose_mode_is_enabled
+    # Use the simple case, but check for the full output
+    skip "TODO"
   end
 end
