@@ -33,7 +33,7 @@ class TestScraper < Minitest::Test
     # shelling out "keeps" the gems from this test runner, making the script fail
     Bundler.with_original_env do
       `bash -c '#{command}'`
-    end
+    end.strip
   end
 
   def test_index_page_has_no_projects
@@ -62,8 +62,26 @@ class TestScraper < Minitest::Test
     assert_equal "9 campaigns, 900€ total, 720€ remaining, 180€ earned", run_scraper
   end
 
-  def test_verbose_mode_is_enabled
+  def test_verbose_mode_is_enabled_with_short_flag
     # Use the simple case, but check for the full output
     skip "TODO"
   end
+
+  def test_verbose_mode_is_enabled_with_long_flag
+    # Use the simple case, but check for the full output
+    skip "TODO"
+  end
+
+  def test_help_message_shown_for_short_flag
+    skip "TODO"
+  end
+
+  def test_help_message_shown_for_long_flag
+    skip "TODO"
+  end
+  
+  def test_error_shown_on_missing_url
+    skip "TODO"
+  end
+
 end
