@@ -7,11 +7,8 @@ require 'httpx'
 require 'nokogiri'
 require 'pp'
 
-index_url  = ENV['CROWDFUNDER_PROJECTS_URL']
-index_html = HTTPX.get(index_url).to_s
-index      = Nokogiri.parse(index_html)
-
 def get_n_parse(url)
+  puts "GET #{url.inspect}"
   res = HTTPX.get(url)
   unless res.status == 200
     puts "AAAAAAAAAA HTTP error for #{url} - #{res.status}"
@@ -23,6 +20,10 @@ end
 def parse_detail_page_urls(page)
   page.css('.campaign-details a.campaign-link').map { |a| a[:href] }
 end
+
+index_url  = ENV['CROWDFUNDER_PROJECTS_URL']
+index_html = get_n_parse(index_url)
+index      = Nokogiri.parse(index_html)
 
 pages = [index]
 page_urls = index.css('ul.pagination a.page-link').map { |a| a[:href] }
