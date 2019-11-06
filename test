@@ -5,17 +5,20 @@ require 'rubygems'
 require 'bundler/setup'
 require 'pp'
 require 'pry'
+require 'capybara'
+require "minitest/autorun"
 
 SCRAPER_PATH = ARGV.first
 unless SCRAPER_PATH and File.exist?(SCRAPER_PATH)
   raise ArgumentError, "Please provide the scraper you want to test, i.e. './test ruby/scrape_crowdfunder'"
 end
 
-require "minitest/autorun"
-
 class TestScraper < Minitest::Test
+
   def setup
-    @testserver_url = "http://example.com"
+    app             = proc { |_env| [200, {}, ['Hello, Sailor!']] }
+    server          = Capybara::Server.new(app).boot
+    @testserver_url = "http://#{server.host}:#{server.port}"
   end
   
   def run_scraper
@@ -33,8 +36,8 @@ class TestScraper < Minitest::Test
     end
   end
 
-  def test_index_page_has_no_links
-    assert_equal "No valid links for pagination of projects found, has the site changed?", run_scraper
+  def test_index_page_has_no_projects
+    assert_equal "No projects found, has the site changed? Check the URL given?", run_scraper
   end
 
   def test_index_page_returns_404
