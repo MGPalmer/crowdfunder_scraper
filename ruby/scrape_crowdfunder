@@ -6,12 +6,24 @@ require 'bundler/setup'
 require 'httpx'
 require 'nokogiri'
 require 'pp'
+require 'optparse'
 
-def get_n_parse(url)
-  puts "GET #{url.inspect}"
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: ./scrape_crowdfunder [options] http://example.com/projects"
+  
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options[:verbose] = v
+  end
+end.order!
+
+verbose = options[:verbose]
+
+def get_n_parse(url, verbose = false)
+  puts "GET #{url.inspect}" if verbose
   res = HTTPX.get(url)
   unless res.status == 200
-    puts "AAAAAAAAAA HTTP error for #{url} - #{res.status}"
+    puts "AAAAAAAAAA HTTP error for #{url} - #{res.status}" if verbose
     return nil
   end
   Nokogiri.parse(res.body.to_s)
@@ -26,13 +38,13 @@ unless index_url
   raise ArgumentError, "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'"
 end
 
-index = get_n_parse(index_url)
+index = get_n_parse(index_url, verbose)
 
 pages = [index]
 page_urls = index.css('ul.pagination a.page-link').map { |a| a[:href] }
-pp(page_urls)
+pp(page_urls) if verbose
 page_urls.each do |page_url|
-  pages << get_n_parse(page_url)
+  pages << get_n_parse(page_url, verbose)
 end
 
 pages.compact!
@@ -42,13 +54,13 @@ pages.each do |page|
   detail_urls += parse_detail_page_urls(page)
 end
 
-pp(detail_urls)
+pp(detail_urls) if verbose
 
 if detail_urls.size == 0
   puts "No projects found, has the site changed? Check the URL given?"
 else
   campaigns = detail_urls.map do |detail_url|
-    page = get_n_parse(detail_url)
+    page = get_n_parse(detail_url, verbose)
     next unless page
 
     # puts page.css("h5.campaign-goal").text
@@ -61,7 +73,7 @@ else
     }
   end.compact
 
-  pp(campaigns)
+  pp(campaigns) if verbose
 
   count     = campaigns.size
   total     = campaigns.inject(0) { |t, n| t + n[:campaign_goal] }
