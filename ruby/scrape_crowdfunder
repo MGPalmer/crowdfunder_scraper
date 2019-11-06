@@ -44,24 +44,28 @@ end
 
 pp(detail_urls)
 
-campaigns = detail_urls.map do |detail_url|
-  page = get_n_parse(detail_url)
-  next unless page
+if detail_urls.size == 0
+  puts "No projects found, has the site changed? Check the URL given?"
+else
+  campaigns = detail_urls.map do |detail_url|
+    page = get_n_parse(detail_url)
+    next unless page
 
-  # puts page.css("h5.campaign-goal").text
-  campaign_goal    = Integer(page.css('h5.campaign-goal').text.gsub(/€|,/, ''))
-  remaining_amount = Integer(page.css('p.remaining-amount').inner_html.gsub(',', '').scan(/€(\d+)?\s/m).flatten.first)
-  {
-    url: detail_url,
-    campaign_goal: campaign_goal,
-    remaining_amount: remaining_amount
-  }
-end.compact
+    # puts page.css("h5.campaign-goal").text
+    campaign_goal    = Integer(page.css('h5.campaign-goal').text.gsub(/€|,/, ''))
+    remaining_amount = Integer(page.css('p.remaining-amount').inner_html.gsub(',', '').scan(/€(\d+)?\s/m).flatten.first)
+    {
+      url: detail_url,
+      campaign_goal: campaign_goal,
+      remaining_amount: remaining_amount
+    }
+  end.compact
 
-pp(campaigns)
+  pp(campaigns)
 
-count     = campaigns.size
-total     = campaigns.inject(0) { |t, n| t + n[:campaign_goal] }
-remaining = campaigns.inject(0) { |t, n| t + n[:remaining_amount] }
+  count     = campaigns.size
+  total     = campaigns.inject(0) { |t, n| t + n[:campaign_goal] }
+  remaining = campaigns.inject(0) { |t, n| t + n[:remaining_amount] }
 
-puts "#{count} campaigns, #{total}€ total, #{remaining}€ remaining, #{total - remaining}€ earned"
+  puts "#{count} campaigns, #{total}€ total, #{remaining}€ remaining, #{total - remaining}€ earned"
+end
