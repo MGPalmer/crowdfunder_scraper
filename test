@@ -7,6 +7,7 @@ require 'pp'
 require 'pry'
 require 'capybara'
 require "minitest/autorun"
+require 'open3'
 
 SCRAPER_PATH = ARGV.first
 unless SCRAPER_PATH and File.exist?(SCRAPER_PATH)
@@ -16,9 +17,11 @@ end
 class TestScraper < Minitest::Test
 
   def setup
-    app             = proc { |_env| [200, {}, ['Hello, Sailor!']] }
-    server          = Capybara::Server.new(app).boot
-    @testserver_url = "http://#{server.host}:#{server.port}"
+    @response_status = 200
+    @response_body   = 'Hello, Sailor!'
+    app              = proc { |_env| [@response_status, {}, [@response_body]] }
+    server           = Capybara::Server.new(app).boot
+    @testserver_url  = "http://#{server.host}:#{server.port}"
   end
   
   def run_scraper
@@ -31,17 +34,37 @@ class TestScraper < Minitest::Test
     # We need to have a "clean" Bundler env (i.e., forget any currently loaded gems),
     # as the script called might be another Ruby script, with its own Gemfile, and by default
     # shelling out "keeps" the gems from this test runner, making the script fail
-    Bundler.with_original_env do
-      `bash -c '#{command}'`
-    end.strip
+    stdout, stderr, status = *Bundler.with_original_env do
+      Open3.capture3(command)
+    end
+    {
+      stdout: stdout.strip,
+      stderr: stderr.strip,
+      status: status.exitstatus,
+    }
+  end
+
+  def assert_error(expected_message)
+    result = run_scraper
+    assert_equal(expected_message, result[:stderr])
+    assert_equal(1, result[:status])
+    result
+  end
+
+  def assert_success(expected_output)
+    result = run_scraper
+    assert_equal(expected_output, result[:stdout])
+    assert_equal(0, result[:status])
+    result
   end
 
   def test_index_page_has_no_projects
-    assert_equal "No projects found, has the site changed? Check the URL given?", run_scraper
+    assert_error "No projects found, has the site changed? Check the URL given?"
   end
 
   def test_index_page_returns_404
-    skip "TODO"
+    @response_status = 404
+    assert_error "Projects page returned HTTP 404 - Is the site down? Check the URL given?"
   end
 
   def test_page_1_returns_404
@@ -54,12 +77,12 @@ class TestScraper < Minitest::Test
 
   def test_simple_success_case
     # TODO: Set up links and data so that there is one project on the first index page, no pagination links
-    assert_equal "1 campaigns, 100€ total, 80€ remaining, 20€ earned", run_scraper
+    assert_success "1 campaigns, 100€ total, 80€ remaining, 20€ earned"
   end
 
   def test_success_with_pagination
     # TODO: Set it up so index page has 8 projects, and 1 extra page with 1 more project on it
-    assert_equal "9 campaigns, 900€ total, 720€ remaining, 180€ earned", run_scraper
+    assert_success "9 campaigns, 900€ total, 720€ remaining, 180€ earned"
   end
 
   def test_verbose_mode_is_enabled_with_short_flag
