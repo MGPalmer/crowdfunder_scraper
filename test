@@ -6,6 +6,7 @@ require 'bundler/setup'
 require 'pp'
 require 'pry'
 require 'capybara'
+Capybara.server = :webrick
 require "minitest/autorun"
 require 'open3'
 
