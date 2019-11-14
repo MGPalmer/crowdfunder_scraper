@@ -36,7 +36,7 @@ end
 
 index_url = ARGV.first
 unless index_url
-  raise ArgumentError, "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'"
+  abort "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'"
 end
 
 index, status = get_n_parse(index_url, verbose)

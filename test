@@ -25,14 +25,14 @@ class TestScraper < Minitest::Test
     @testserver_url  = "http://#{server.host}:#{server.port}"
   end
   
-  def run_scraper(script_options = "")
+  def run_scraper(script_options: nil, index_url: @testserver_url)
     path, script = SCRAPER_PATH.split("/")
     command = ""
     # We need to cd into any sub-folder(s) so the scripts there can do setup like rvm, bundler, nvm, etc.
     command += "cd #{path} && "      if path
     command += "./#{script}"
     command += " #{script_options}"  if script_options
-    command += " #{@testserver_url}"
+    command += " #{index_url}"
     # We need to have a "clean" Bundler env (i.e., forget any currently loaded gems),
     # as the script called might be another Ruby script, with its own Gemfile, and by default
     # shelling out "keeps" the gems from this test runner, making the script fail
@@ -46,15 +46,15 @@ class TestScraper < Minitest::Test
     }
   end
 
-  def assert_error(expected_message)
-    result = run_scraper
+  def assert_error(expected_message, options = {})
+    result = run_scraper(options)
     assert_equal(expected_message, result[:stderr])
     assert_equal(1, result[:status])
     result
   end
 
-  def assert_success(expected_output, script_options = nil)
-    result = run_scraper(script_options)
+  def assert_success(expected_output, options = {})
+    result = run_scraper(options)
     assert_equal(expected_output, result[:stdout])
     assert_equal(0, result[:status])
     result
@@ -106,15 +106,15 @@ HELP
   end
 
   def test_help_message_shown_for_short_flag
-    assert_success(help_text, "-h")
+    assert_success(help_text, script_options: "-h")
   end
 
   def test_help_message_shown_for_long_flag
-    assert_success(help_text, "--help")
+    assert_success(help_text, script_options: "--help")
   end
   
   def test_error_shown_on_missing_url
-    skip "TODO"
+    error = "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'"
+    assert_error(error, index_url: "")
   end
-
 end
