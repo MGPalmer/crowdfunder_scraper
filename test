@@ -25,12 +25,13 @@ class TestScraper < Minitest::Test
     @testserver_url  = "http://#{server.host}:#{server.port}"
   end
   
-  def run_scraper
+  def run_scraper(script_options = "")
     path, script = SCRAPER_PATH.split("/")
     command = ""
     # We need to cd into any sub-folder(s) so the scripts there can do setup like rvm, bundler, nvm, etc.
-    command += "cd #{path} && " if path
+    command += "cd #{path} && "      if path
     command += "./#{script}"
+    command += " #{script_options}"  if script_options
     command += " #{@testserver_url}"
     # We need to have a "clean" Bundler env (i.e., forget any currently loaded gems),
     # as the script called might be another Ruby script, with its own Gemfile, and by default
@@ -52,8 +53,8 @@ class TestScraper < Minitest::Test
     result
   end
 
-  def assert_success(expected_output)
-    result = run_scraper
+  def assert_success(expected_output, script_options = nil)
+    result = run_scraper(script_options)
     assert_equal(expected_output, result[:stdout])
     assert_equal(0, result[:status])
     result
@@ -96,12 +97,20 @@ class TestScraper < Minitest::Test
     skip "TODO"
   end
 
+  def help_text
+    help = <<HELP
+Usage: ./scrape_crowdfunder [options] http://example.com/projects
+    -v, --[no-]verbose               Run verbosely
+HELP
+    help.strip
+  end
+
   def test_help_message_shown_for_short_flag
-    skip "TODO"
+    assert_success(help_text, "-h")
   end
 
   def test_help_message_shown_for_long_flag
-    skip "TODO"
+    assert_success(help_text, "--help")
   end
   
   def test_error_shown_on_missing_url
