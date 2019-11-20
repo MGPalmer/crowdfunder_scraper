@@ -66,11 +66,12 @@ campaigns = detail_urls.map do |detail_url|
   next unless page
 
   # puts page.css("h5.campaign-goal").text
-  campaign_goal    = Integer(page.css('h5.campaign-goal').text.gsub(/€|,/, ''))
-  remaining_amount = Integer(page.css('p.remaining-amount').inner_html.gsub(',', '').scan(/€(\d+)?\s/m).flatten.first)
+  campaign_goal    = Integer(page.css('h5.campaign-goal').text.gsub(/(&euro;|€)|,/, ''))
+  # puts page.css('p.remaining-amount').inner_html
+  remaining_amount = Integer(page.css('p.remaining-amount').inner_html.gsub(',', '').scan(/(&euro;|€)(\d+)?\s/m).flatten.last)
   {
-    url: detail_url,
-    campaign_goal: campaign_goal,
+    url:              detail_url,
+    campaign_goal:    campaign_goal,
     remaining_amount: remaining_amount
   }
 end.compact

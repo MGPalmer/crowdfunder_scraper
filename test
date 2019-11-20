@@ -9,6 +9,8 @@ require 'capybara'
 Capybara.server = :webrick
 require "minitest/autorun"
 require 'open3'
+require 'active_support'
+require 'active_support/core_ext/object/blank'
 
 SCRAPER_PATH = ARGV.first
 unless SCRAPER_PATH and File.exist?(SCRAPER_PATH)
@@ -20,9 +22,19 @@ class TestScraper < Minitest::Test
   def setup
     @response_status = 200
     @response_body   = 'Hello, Sailor!'
-    app              = proc { |_env| [@response_status, {}, [@response_body]] }
-    server           = Capybara::Server.new(app).boot
-    @testserver_url  = "http://#{server.host}:#{server.port}"
+  end
+  
+  def start_test_server
+    @app             ||= proc { |env| [@response_status, {}, [@response_body]] }
+    @app_with_error_handler = proc do |env|
+      @app.call(env)
+    rescue # the TestServer class swallows exceptions, it seems, so let's log them at least
+      puts "\nError in test app handler!"
+      puts $!.message
+      puts $!.backtrace.join("\n")
+    end
+    @test_server     = Capybara::Server.new(@app_with_error_handler).boot
+    @testserver_url  = "http://#{@test_server.host}:#{@test_server.port}"
   end
   
   def run_scraper(script_options: nil, index_url: @testserver_url)
@@ -40,21 +52,25 @@ class TestScraper < Minitest::Test
       Open3.capture3(command)
     end
     {
-      stdout: stdout.strip,
-      stderr: stderr.strip,
+      stdout: stdout.strip.presence,
+      stderr: stderr.strip.presence,
       status: status.exitstatus,
     }
   end
 
   def assert_error(expected_message, options = {})
+    start_test_server unless @test_server
     result = run_scraper(options)
+    puts result[:stdout] if result[:stdout] and expected_message != result[:stderr]
     assert_equal(expected_message, result[:stderr])
     assert_equal(1, result[:status])
     result
   end
 
   def assert_success(expected_output, options = {})
+    start_test_server unless @test_server
     result = run_scraper(options)
+    puts result[:stderr] if result[:stderr] and expected_output != result[:stdout]
     assert_equal(expected_output, result[:stdout])
     assert_equal(0, result[:status])
     result
@@ -78,13 +94,36 @@ class TestScraper < Minitest::Test
   end
 
   def test_simple_success_case
-    # TODO: Set up links and data so that there is one project on the first index page, no pagination links
-    assert_success "1 campaigns, 100€ total, 80€ remaining, 20€ earned"
+    index_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le index page</h1>
+      <div class='campaign-details'><a class='campaign-link' href='#{@testserver_url}/project/1'>project 1</a></div>
+      </body></html>
+      HTML
+    end
+    project_1_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le project 1 page</h1>
+      <h5 class='campaign-goal'> € 1,000 </h5>
+      <p class='remaining-amount'> Bla bla <span> €80,0 </span> </p>
+      </body></html>
+      HTML
+    end
+    @app = proc do |env|
+      html = case env["REQUEST_PATH"]
+      when "/project/1" then project_1_html
+      else index_html
+      end
+      [@response_status, {}, [html.call]]
+    end
+    assert_success "1 campaigns, 1000€ total, 800€ remaining, 200€ earned"#, script_options: "-v"
   end
 
   def test_success_with_pagination
     # TODO: Set it up so index page has 8 projects, and 1 extra page with 1 more project on it
-    assert_success "9 campaigns, 900€ total, 720€ remaining, 180€ earned"
+    assert_success "9 campaigns, 9000€ total, 7200€ remaining, 1800€ earned"
   end
 
   def test_verbose_mode_is_enabled_with_short_flag
