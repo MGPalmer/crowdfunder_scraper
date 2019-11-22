@@ -115,7 +115,32 @@ class TestScraper < Minitest::Test
   end
 
   def test_page_1_returns_404
-    skip "TODO"
+    # I haven't seen this case "in the wild" yet, but we want to have a good error message if
+    # this happens
+    # we need to include at least one detail link, otherwise a different error message is triggered.
+    # But we don't need to implement the page as the pagination error should occur first.
+    index_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le index page</h1>
+      <div class='campaign-details'><a class='campaign-link' href='#{@testserver_url}/project/1'>project 1</a></div>
+      <ul class='pagination'>
+        <li><a class='page-link' href='#{@testserver_url}/page/1'>Next page</a></li>
+      </ul>
+      </body></html>
+      HTML
+    end
+    @app = proc do |env|
+      path = env["REQUEST_PATH"]
+      status, html = *case path
+      when "/page/1"
+        [404, ""]
+      else
+        [200, index_html.call]
+      end
+      [status, {}, [html]]
+    end
+    assert_error "Pagination link returned HTTP 404 - Is the site down? Check the URL given?"
   end
 
   def test_detail_page_1_returns_404_is_ignored

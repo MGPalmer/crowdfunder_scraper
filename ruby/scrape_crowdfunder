@@ -48,7 +48,10 @@ page_urls = index.css('ul.pagination a.page-link').map { |a| a[:href] }
 pp(page_urls) if verbose
 page_urls.each do |page_url|
   page, status = *get_n_parse(page_url, verbose)
-  pages << page if page
+  if status != 200
+    abort "Pagination link returned HTTP #{status} - Is the site down? Check the URL given?"
+  end
+  pages << page
 end
 
 detail_urls = []
