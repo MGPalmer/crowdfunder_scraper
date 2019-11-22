@@ -85,14 +85,6 @@ class TestScraper < Minitest::Test
     assert_error "Projects page returned HTTP 404 - Is the site down? Check the URL given?"
   end
 
-  def test_page_1_returns_404
-    skip "TODO"
-  end
-
-  def test_detail_page_1_returns_404
-    skip "TODO"
-  end
-
   def test_simple_success_case
     # Set it up so there's only one page (the index page), i.e. no pagination, and only one project
     index_html = lambda do
@@ -114,12 +106,60 @@ class TestScraper < Minitest::Test
     end
     @app = proc do |env|
       html = case env["REQUEST_PATH"]
-      when "/project/1" then project_1_html
-      else index_html
+      when "/project/1" then project_1_html.call
+      else index_html.call
       end
-      [@response_status, {}, [html.call]]
+      [@response_status, {}, [html]]
     end
     assert_success "1 campaigns, 1000€ total, 800€ remaining, 200€ earned"
+  end
+
+  def test_page_1_returns_404
+    skip "TODO"
+  end
+
+  def test_detail_page_1_returns_404_is_ignored
+    # when a detail page is not working, we ignore it and don't count the project
+    # so set it up so that we have 3 links, but the second one returns 404
+    # also take the opportunity to check that parsing different amounts of currency works
+    index_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le index page</h1>
+      <div class='campaign-details'><a class='campaign-link' href='#{@testserver_url}/project/1'>project 1</a></div>
+      <div class='campaign-details'><a class='campaign-link' href='#{@testserver_url}/project/2'>project 2</a></div>
+      <div class='campaign-details'><a class='campaign-link' href='#{@testserver_url}/project/3'>project 3</a></div>
+      </body></html>
+      HTML
+    end
+    project_1_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le project 1 page</h1>
+      <h5 class='campaign-goal'> €30 </h5>
+      <p class='remaining-amount'> Bla bla <span> €29 </span> </p>
+      </body></html>
+      HTML
+    end
+    project_3_html = lambda do
+      <<-HTML
+      <html><body>
+      <h1>Le project 3 page</h1>
+      <h5 class='campaign-goal'> € 999999 </h5>
+      <p class='remaining-amount'> Bla bla <span> €0 </span> </p>
+      </body></html>
+      HTML
+    end
+    @app = proc do |env|
+      status, html = *case env["REQUEST_PATH"]
+      when "/project/1" then [200, project_1_html.call]
+      when "/project/2" then [404, ""]
+      when "/project/3" then [200, project_3_html.call]
+      else [200, index_html.call]
+      end
+      [status, {}, [html]]
+    end
+    assert_success "2 campaigns, 1000029€ total, 29€ remaining, 1000000€ earned"#, script_options: "-v"
   end
 
   def test_success_with_pagination

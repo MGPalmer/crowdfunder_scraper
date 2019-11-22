@@ -27,7 +27,7 @@ def get_n_parse(url, verbose = false)
     puts "HTTP error status for #{url} - #{status}" if verbose
     return nil, status
   end
-  Nokogiri.parse(res.body.to_s)
+  [Nokogiri.parse(res.body.to_s), status]
 end
 
 def parse_detail_page_urls(page)
@@ -47,10 +47,9 @@ pages = [index]
 page_urls = index.css('ul.pagination a.page-link').map { |a| a[:href] }
 pp(page_urls) if verbose
 page_urls.each do |page_url|
-  pages << get_n_parse(page_url, verbose)
+  page, status = *get_n_parse(page_url, verbose)
+  pages << page if page
 end
-
-pages.compact!
 
 detail_urls = []
 pages.each do |page|
@@ -62,7 +61,7 @@ pp(detail_urls) if verbose
 abort("No projects found, has the site changed? Check the URL given?") if detail_urls.size == 0
 
 campaigns = detail_urls.map do |detail_url|
-  page = get_n_parse(detail_url, verbose)
+  page, status = *get_n_parse(detail_url, verbose)
   next unless page
 
   # puts page.css("h5.campaign-goal").text
