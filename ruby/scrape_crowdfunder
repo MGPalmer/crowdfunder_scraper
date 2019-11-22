@@ -20,14 +20,16 @@ end.order!
 verbose = options[:verbose]
 
 def get_n_parse(url, verbose = false)
-  puts "GET #{url.inspect}" if verbose
-  res = HTTPX.get(url)
+  print "Fetching: GET #{url} ... " if verbose
+  res    = HTTPX.get(url)
   status = res.status
+  body   = res.body.to_s
+  puts "status #{status}, #{body.bytesize} bytes" if verbose
   unless status == 200
     puts "HTTP error status for #{url} - #{status}" if verbose
     return nil, status
   end
-  [Nokogiri.parse(res.body.to_s), status]
+  [Nokogiri.parse(body), status]
 end
 
 def parse_detail_page_urls(page)
@@ -45,7 +47,6 @@ abort("Projects page returned HTTP #{status} - Is the site down? Check the URL g
 
 pages = [index]
 page_urls = index.css('ul.pagination a.page-link').map { |a| a[:href] }
-pp(page_urls) if verbose
 page_urls.each do |page_url|
   page, status = *get_n_parse(page_url, verbose)
   if status != 200
@@ -58,8 +59,6 @@ detail_urls = []
 pages.each do |page|
   detail_urls += parse_detail_page_urls(page)
 end
-
-pp(detail_urls) if verbose
 
 abort("No projects found, has the site changed? Check the URL given?") if detail_urls.size == 0
 
@@ -77,8 +76,6 @@ campaigns = detail_urls.map do |detail_url|
     remaining_amount: remaining_amount
   }
 end.compact
-
-pp(campaigns) if verbose
 
 count     = campaigns.size
 total     = campaigns.inject(0) { |t, n| t + n[:campaign_goal] }

@@ -85,7 +85,7 @@ class TestScraper < Minitest::Test
     assert_error "Projects page returned HTTP 404 - Is the site down? Check the URL given?"
   end
 
-  def test_simple_success_case
+  def set_up_simple_success_case
     # Set it up so there's only one page (the index page), i.e. no pagination, and only one project
     index_html = lambda do
       <<-HTML
@@ -111,6 +111,10 @@ class TestScraper < Minitest::Test
       end
       [@response_status, {}, [html]]
     end
+  end
+
+  def test_simple_success_case
+    set_up_simple_success_case
     assert_success "1 campaigns, 1000€ total, 800€ remaining, 200€ earned"
   end
 
@@ -242,14 +246,27 @@ class TestScraper < Minitest::Test
     assert_success "9 campaigns, 9000€ total, 7200€ remaining, 1800€ earned"#, script_options: "-v"
   end
 
+  def verbose_text
+    verbose = <<VERBOSE
+Fetching: GET #{@testserver_url} ... status 200, 190 bytes
+Fetching: GET #{@testserver_url}/project/1 ... status 200, 193 bytes
+1 campaigns, 1000€ total, 800€ remaining, 200€ earned
+VERBOSE
+    verbose.strip
+  end
+
   def test_verbose_mode_is_enabled_with_short_flag
     # Use the simple case, but check for the full output
-    skip "TODO"
+    start_test_server # need to start this up first, so we can know the server address
+    set_up_simple_success_case
+    assert_success(verbose_text, script_options: "-v")
   end
 
   def test_verbose_mode_is_enabled_with_long_flag
     # Use the simple case, but check for the full output
-    skip "TODO"
+    start_test_server # need to start this up first, so we can know the server address
+    set_up_simple_success_case
+    assert_success(verbose_text, script_options: "--verbose")
   end
 
   def help_text
