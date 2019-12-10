@@ -25,8 +25,8 @@ class TestScraper < Minitest::Test
   end
   
   def start_test_server
-    @app             ||= proc { |env| [@response_status, {}, [@response_body]] }
-    @app_with_error_handler = proc do |env|
+    @app             ||= -> (env) { [@response_status, {}, [@response_body]] }
+    @app_with_error_handler = -> (env) do
       @app.call(env)
     rescue # the TestServer class swallows exceptions, it seems, so let's log them at least
       puts "\nError in test app handler!"
@@ -87,7 +87,7 @@ class TestScraper < Minitest::Test
 
   def set_up_simple_success_case
     # Set it up so there's only one page (the index page), i.e. no pagination, and only one project
-    index_html = lambda do
+    index_html = -> do
       <<-HTML
       <html><body>
       <h1>Le index page</h1>
@@ -95,7 +95,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    project_1_html = lambda do
+    project_1_html = -> do
       <<-HTML
       <html><body>
       <h1>Le project 1 page</h1>
@@ -104,7 +104,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    @app = proc do |env|
+    @app = -> (env) do
       html = case env["REQUEST_PATH"]
       when "/project/1" then project_1_html.call
       else index_html.call
@@ -123,7 +123,7 @@ class TestScraper < Minitest::Test
     # this happens
     # we need to include at least one detail link, otherwise a different error message is triggered.
     # But we don't need to implement the page as the pagination error should occur first.
-    index_html = lambda do
+    index_html = -> do
       <<-HTML
       <html><body>
       <h1>Le index page</h1>
@@ -134,7 +134,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    @app = proc do |env|
+    @app = -> (env) do
       path = env["REQUEST_PATH"]
       status, html = *case path
       when "/page/1"
@@ -151,7 +151,7 @@ class TestScraper < Minitest::Test
     # when a detail page is not working, we ignore it and don't count the project
     # so set it up so that we have 3 links, but the second one returns 404
     # also take the opportunity to check that parsing different amounts of currency works
-    index_html = lambda do
+    index_html = -> do
       <<-HTML
       <html><body>
       <h1>Le index page</h1>
@@ -161,7 +161,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    project_1_html = lambda do
+    project_1_html = -> do
       <<-HTML
       <html><body>
       <h1>Le project 1 page</h1>
@@ -170,7 +170,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    project_3_html = lambda do
+    project_3_html = -> do
       <<-HTML
       <html><body>
       <h1>Le project 3 page</h1>
@@ -179,7 +179,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    @app = proc do |env|
+    @app = -> (env) do
       status, html = *case env["REQUEST_PATH"]
       when "/project/1" then [200, project_1_html.call]
       when "/project/2" then [404, ""]
@@ -194,7 +194,7 @@ class TestScraper < Minitest::Test
   def test_success_with_pagination
     # Set it up so index page has 8 projects, and 1 extra page with 1 more project on it
     # Index page has 8 links to detail pages, and 1 link to an extra page
-    index_html = lambda do
+    index_html = -> do
       <<-HTML
       <html><body>
       <h1>Le index page</h1>
@@ -213,7 +213,7 @@ class TestScraper < Minitest::Test
       HTML
     end
     # This is basically the same as index, only without pagination and with only one detail page link
-    first_pagination_html = lambda do
+    first_pagination_html = -> do
       <<-HTML
       <html><body>
       <h1>Le first pagination page</h1>
@@ -223,7 +223,7 @@ class TestScraper < Minitest::Test
     end
     # detail page has only the actual two numbers we're interested in. Make the number of the project
     # dynamic via a block parameter, so we can discern each page for debugging
-    project_n_html = lambda do |number|
+    project_n_html = -> (number) do
       <<-HTML
       <html><body>
       <h1>Le project #{number} page</h1>
@@ -232,7 +232,7 @@ class TestScraper < Minitest::Test
       </body></html>
       HTML
     end
-    @app = proc do |env|
+    @app = -> (env) do
       path = env["REQUEST_PATH"]
       html = case path
       when /\/project\/\d/ # use the number from the path parameter
