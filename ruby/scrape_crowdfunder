@@ -12,8 +12,12 @@ options = {}
 OptionParser.new do |opts|
   opts.banner = "Usage: ./scrape_crowdfunder [options] http://example.com/projects"
   
-  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+  opts.on("-v", "--verbose", "Run verbosely") do |v|
     options[:verbose] = v
+  end
+  opts.on("-h", "--help", "Show help") do
+    puts opts
+    exit
   end
 end.order!
 

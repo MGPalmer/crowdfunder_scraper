@@ -269,20 +269,29 @@ VERBOSE
     assert_success(verbose_text, script_options: "--verbose")
   end
 
-  def help_text
-    help = <<HELP
-Usage: ./scrape_crowdfunder [options] http://example.com/projects
-    -v, --[no-]verbose               Run verbosely
-HELP
-    help.strip
+  def assert_help_option(options = {})
+    start_test_server unless @test_server
+    result = run_scraper(options)
+    assert_equal(0, result[:status])
+    stdout = result[:stdout]
+    [
+      "--verbose",
+      "-v",
+      "--help",
+      "-h",
+      "./scrape_crowdfunder [options] http://example.com/projects",
+    ].each do |help_text|
+      assert(stdout.include?(help_text), "Whups!\n#{stdout.inspect}\n doesn't include #{help_text.inspect}!")
+    end
+    result
   end
 
   def test_help_message_shown_for_short_flag
-    assert_success(help_text, script_options: "-h")
+    assert_help_option(script_options: "-h")
   end
 
   def test_help_message_shown_for_long_flag
-    assert_success(help_text, script_options: "--help")
+    assert_help_option(script_options: "--help")
   end
   
   def test_error_shown_on_missing_url
