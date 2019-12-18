@@ -14,6 +14,7 @@ const argv = yargs
   .help()
   .alias("help", "h").argv;
 
+const cheerio = require('cheerio');
 const verbose = argv.verbose;
 const index_url = argv._[0];
 
@@ -33,7 +34,18 @@ async function getIndex(url, verbose) {
     console.log(`status ${status}, ${index_html.length} bytes`);
   }
   if (status === 200) {
-    console.log("now parsing");
+    const $ = cheerio.load(index_html);
+    const detailPageLinks = $('.campaign-details a.campaign-link')
+      .get()
+      .map(link => {
+        return $(link).attr("href");
+      });
+    //    console.log(detailPageLinks);
+    if (detailPageLinks.length === 0) {
+      abort("No projects found, has the site changed? Check the URL given?");
+    } else {
+      console.log("moar parsings!");
+    }
   } else {
     abort(`Projects page returned HTTP ${status} - Is the site down? Check the URL given?`);
   }
