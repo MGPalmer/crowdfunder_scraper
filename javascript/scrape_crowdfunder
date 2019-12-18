@@ -14,21 +14,33 @@ const argv = yargs
   .help()
   .alias("help", "h").argv;
 
+const verbose = argv.verbose;
 const index_url = argv._[0];
-console.log(index_url);
-if (index_url) {
-  console.log("bla bla");
-  // fetch(index_url).then(res => {
-  //   // console.log(res.ok);
-  //   console.log(res.text());
-  //   console.log(res.status);
-  //   // console.log(res.statusText);
-  //   // console.log(res.headers.raw());
-  //   // console.log(res.headers.get("content-type"));
-  // });
-} else {
-  process.stderr.write(
-    "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'\n"
-  );
+
+function abort(message) {
+  process.stderr.write(message + "\n");
   process.exit(1);
+}
+
+async function getIndex(url, verbose) {
+  if (verbose) {
+    process.stdout.write(`Fetching: GET ${url} ... `);
+  }
+  const index_res = await fetch(index_url);
+  const status = index_res.status;
+  const index_html = await index_res.text();
+  if (verbose) {
+    console.log(`status ${status}, ${index_html.length} bytes`);
+  }
+  if (status === 200) {
+    console.log("now parsing");
+  } else {
+    abort(`Projects page returned HTTP ${status} - Is the site down? Check the URL given?`);
+  }
+}
+
+if (index_url) {
+  getIndex(index_url, verbose);
+} else {
+  abort("Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'");
 }
