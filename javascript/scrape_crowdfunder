@@ -23,31 +23,35 @@ function abort(message) {
   process.exit(1);
 }
 
-async function getIndex(url, verbose) {
+async function fetchAndParse(url, verbose) {
   if (verbose) {
     process.stdout.write(`Fetching: GET ${url} ... `);
   }
-  let index_res;
+  let response;
   await fetch(index_url)
     .then(res => {
-      index_res = res;
+      response = res;
     })
     .catch(err => {
       process.stderr.write(err.message + "\n");
     });
   let status;
-  let index_html;
-  if (index_res) {
-    status = index_res.status;
-    index_html = await index_res.text();
+  let html;
+  if (response) {
+    status = response.status;
+    html = await response.text();
     if (verbose) {
-      console.log(`status ${status}, ${index_html.length} bytes`);
+      console.log(`status ${status}, ${html.length} bytes`);
     }
   } else {
     status = -1;
   }
+  return { status: status, $: cheerio.load(html) };
+}
+
+async function getIndex(url, verbose) {
+  const { status, $ } = await fetchAndParse(url, verbose);
   if (status === 200) {
-    const $ = cheerio.load(index_html);
     const detailPageLinks = $(".campaign-details a.campaign-link")
       .get()
       .map(link => {
