@@ -27,11 +27,13 @@ def get_n_parse(url, verbose = false)
   print "Fetching: GET #{url} ... " if verbose
   res    = HTTPX.get(url)
   status = res.status
-  body   = res.body.to_s
-  puts "status #{status}, #{body.bytesize} bytes" if verbose
+  error  = (status.to_i == 0) # HTTPX puts a string in here when there's an non-HTTP error (i.e. connection refused etc.)
+  
+  body   = error ? "" : res.body.to_s
+  puts "status #{status}, #{body.bytesize} bytes" if verbose and !error
   unless status == 200
     puts "HTTP error status for #{url} - #{status}" if verbose
-    return nil, status
+    return nil, (error ? "???" : status)
   end
   [Nokogiri.parse(body), status]
 end

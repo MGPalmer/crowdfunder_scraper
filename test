@@ -85,6 +85,21 @@ class TestScraper < Minitest::Test
     assert_error "Projects page returned HTTP 404 - Is the site down? Check the URL given?"
   end
 
+  def test_index_page_catches_network_error
+    @test_server = "whoopsies!" # this should prevent the helpers starting the test server
+    @testserver_url = "http://localhost:65535" # hopefully noone answers here
+    result = assert_error "Projects page returned HTTP ??? - Is the site down? Check the URL given?"
+    assert_nil(result[:stdout])
+  end
+
+  def test_index_page_catches_network_error_in_verbose_mode
+    @test_server = "whoopsies!" # this should prevent the helpers starting the test server
+    @testserver_url = "http://localhost:65535" # hopefully noone answers here
+    result = assert_error "Projects page returned HTTP ??? - Is the site down? Check the URL given?", script_options: "--verbose"
+    stdout = result[:stdout]
+    assert_match(/Fetching.*?error/, stdout) # the exact output will differ between implementations, just want to check the request logging is being attempted, and then an error is mentioned
+  end
+
   def set_up_simple_success_case
     # Set it up so there's only one page (the index page), i.e. no pagination, and only one project
     index_html = -> do

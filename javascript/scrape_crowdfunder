@@ -28,25 +28,38 @@ async function fetchAndParse(url, verbose) {
     process.stdout.write(`Fetching: GET ${url} ... `);
   }
   let response;
-  await fetch(index_url)
+  let status;
+  let error_message;
+  await fetch(url)
     .then(res => {
       response = res;
     })
     .catch(err => {
-      process.stderr.write(err.message + "\n");
+      if (verbose) {
+        error_message = err.message;
+      }
     });
-  let status;
   let html;
   if (response) {
     status = response.status;
-    html = await response.text();
-    if (verbose) {
-      console.log(`status ${status}, ${html.length} bytes`);
+    if (status != 200) {
+      if (verbose) {
+        console.log(`HTTP error status for ${url} - ${status}`);
+      }
+      return { status: status, $: undefined };
+    } else {
+      html = await response.text();
+      if (verbose) {
+        console.log(`status ${status}, ${html.length} bytes`);
+      }
+      return { status: status, $: cheerio.load(html) };
     }
   } else {
-    status = -1;
+    if (verbose) {
+      console.log(`HTTP error status for ${url} - ${error_message}`);
+    }
+    return { status: "???", $: undefined };
   }
-  return { status: status, $: cheerio.load(html) };
 }
 
 async function getIndex(url, verbose) {
@@ -57,11 +70,13 @@ async function getIndex(url, verbose) {
       .map(link => {
         return $(link).attr("href");
       });
-    //    console.log(detailPageLinks);
     if (detailPageLinks.length === 0) {
       abort("No projects found, has the site changed? Check the URL given?");
     } else {
-      console.log("moar parsings!");
+      return {
+        detailPageLinks: detailPageLinks,
+        nextPaginationLink: undefined
+      };
     }
   } else {
     abort(
