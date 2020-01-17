@@ -23,7 +23,7 @@ function abort(message) {
   process.exit(1);
 }
 
-async function fetchAndParse(url, verbose) {
+async function fetchAndParse(url, verbose, resolve) {
   if (verbose) {
     process.stdout.write(`Fetching: GET ${url} ... `);
   }
@@ -52,7 +52,13 @@ async function fetchAndParse(url, verbose) {
       if (verbose) {
         console.log(`status ${status}, ${html.length} bytes`);
       }
-      return { status: status, $: cheerio.load(html) };
+      let $ = cheerio.load(html);
+      result = { status: status, $: $ }
+      if (resolve) {
+        return resolve(result);
+      } else {
+        return result;
+      }
     }
   } else {
     if (verbose) {
@@ -62,27 +68,75 @@ async function fetchAndParse(url, verbose) {
   }
 }
 
-async function getIndex(url, verbose) {
-  const { status, $ } = await fetchAndParse(url, verbose);
-  if (status === 200) {
-    const detailPageLinks = $(".campaign-details a.campaign-link")
-      .get()
-      .map(link => {
-        return $(link).attr("href");
-      });
-    if (detailPageLinks.length === 0) {
-      abort("No projects found, has the site changed? Check the URL given?");
+function getDetailPages(urls, results, verbose) {
+  console.log(urls);
+  return urls.map(url => getDetailPage(url, results));
+}
+
+function parseCampaignGoal($) {
+  let x = $('h5.campaign-goal').text().replace(/(&euro;|€)|,/g, '');
+  //console.log(x);
+  return Number(x);
+}
+
+function parseRemainingAmount($) {
+  return 0;
+  let x = $('p.remaining-amount').innerHTML()//.replace(/(&euro;|€)|,/g, '');
+  console.log(x);
+  return Number(x);
+}
+
+function getDetailPage(url, verbose) {
+  return fetchAndParse(url, verbose, ({status, $}) => {
+    console.log(status);
+    const campaignGoal = parseCampaignGoal($);
+    const remainingAmount = parseRemainingAmount($);
+    const result = {
+      url: url,
+      campaignGoal: campaignGoal,
+      remainingAmount: remainingAmount
+    };
+    //console.table(result);
+    return result;
+  });
+}
+
+function printResults(results) {
+  const count = results.length;
+  const total = results.reduce((t, current) => {
+    return t + current.campaignGoal;
+  }, 0);
+  const remaining = results.reduce((t, current) => {
+    return t + current.remainingAmount;
+  }, 0);
+  console.log(
+    `${count} campaigns, ${total}€ total, ${remaining}€ remaining, ${total -
+      remaining}€ earned`
+  );
+}
+
+function getIndex(url, verbose) {
+  fetchAndParse(url, verbose, ({ status, $ }) => {
+    if (status === 200) {
+      const detailPageLinks = parseDetailPageLinks($);
+      if (detailPageLinks.length === 0) {
+        abort("No projects found, has the site changed? Check the URL given?");
+      } else {
+        let queries = getDetailPages(detailPageLinks, verbose);
+        //console.log("before promise.all");
+        //console.log(queries);
+        Promise.all(queries).then((values) => {
+          //console.log("resolved promise.all");
+          console.table(values);
+          printResults(values);
+        });
+      }
     } else {
-      return {
-        detailPageLinks: detailPageLinks,
-        nextPaginationLink: undefined
-      };
+      abort(
+        `Projects page returned HTTP ${status} - Is the site down? Check the URL given?`
+      );
     }
-  } else {
-    abort(
-      `Projects page returned HTTP ${status} - Is the site down? Check the URL given?`
-    );
-  }
+  });
 }
 
 if (index_url) {
@@ -91,4 +145,12 @@ if (index_url) {
   abort(
     "Please provide the url of the list of campaigns, i.e. './scrape_crowdfunder http://example.com/projects'"
   );
+}
+
+function parseDetailPageLinks($) {
+  return $(".campaign-details a.campaign-link")
+    .get()
+    .map(link => {
+      return $(link).attr("href");
+    });
 }
