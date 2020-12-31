@@ -6,7 +6,7 @@ GEM
       http-2-next (>= 0.1.2)
       timers
     mini_portile2 (2.4.0)
-    nokogiri (1.10.7)
+    nokogiri (1.10.10)
       mini_portile2 (~> 2.4.0)
     timers (4.3.0)
 
